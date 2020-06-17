@@ -34,3 +34,7 @@ func Normalize(url string) (id string, err error) {
 func RedirectURL(id, callbackURL, realm string) (string, error) {
 	return openid.RedirectURL(id, callbackURL, realm)
 }
+
+func BuildRedirectURL(endpoint, localId, claimedId, callbackURL, realm string) (string, error) {
+	return openid.BuildRedirectURL(endpoint, localId, claimedId, callbackURL, realm)
+}
