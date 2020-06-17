@@ -356,7 +356,7 @@ func RegisterRoutes(m *web.Route) {
 		m.Group("", func() {
 			m.Combo("/login/openid").
 				Get(user.SignInOpenID).
-				Post(bindIgnErr(auth.SignInOpenIDForm{}), user.SignInOpenIDPost)
+				Post(bindIgnErr(auth.SignInOpenIDUDEForm{}), user.SignInOpenIDPost)
 		}, openIDSignInEnabled)
 		m.Group("/openid", func() {
 			m.Combo("/connect").
