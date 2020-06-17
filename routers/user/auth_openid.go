@@ -7,6 +7,7 @@ package user
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/auth"
@@ -25,7 +26,7 @@ import (
 )
 
 const (
-	tplSignInOpenID base.TplName = "user/auth/signin_openid"
+	tplSignInOpenID base.TplName = "user/auth/signin_openid_ude"
 	tplConnectOID   base.TplName = "user/auth/signup_openid_connect"
 	tplSignUpOID    base.TplName = "user/auth/signup_openid_register"
 )
@@ -90,7 +91,7 @@ func allowedOpenIDURI(uri string) (err error) {
 }
 
 // SignInOpenIDPost response for openid sign in request
-func SignInOpenIDPost(ctx *context.Context, form auth.SignInOpenIDForm) {
+func SignInOpenIDPost(ctx *context.Context, form auth.SignInOpenIDUDEForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 	ctx.Data["PageIsSignIn"] = true
 	ctx.Data["PageIsLoginOpenID"] = true
@@ -100,23 +101,31 @@ func SignInOpenIDPost(ctx *context.Context, form auth.SignInOpenIDForm) {
 		return
 	}
 
-	id, err := openid.Normalize(form.Openid)
-	if err != nil {
-		ctx.RenderWithErr(err.Error(), tplSignInOpenID, &form)
+	//id, err := openid.Normalize(form.Openid)
+	//if err != nil {
+	//	ctx.RenderWithErr(err.Error(), tplSignInOpenID, &form)
+	//	return
+	//}
+	//form.Openid = id
+
+	log.Trace("UDE Kennung uri: " + form.Email)
+
+	//err = allowedOpenIDURI(id)
+	//if err != nil {
+	//	ctx.RenderWithErr(err.Error(), tplSignInOpenID, &form)
+	//	return
+	//}
+	match, _ := regexp.MatchString(form.Email, "^([0-9a-zA-Z]+)$")
+	if match {
+		ctx.RenderWithErr("Incorrect email format.", tplSignInOpenID, &form)
 		return
 	}
-	form.Openid = id
 
-	log.Trace("OpenID uri: " + id)
-
-	err = allowedOpenIDURI(id)
-	if err != nil {
-		ctx.RenderWithErr(err.Error(), tplSignInOpenID, &form)
-		return
-	}
-
+	claimedId := fmt.Sprintf("https://benutzerverwaltung.uni-duisburg-essen.de/auth/openid_a/user.cgi?username=student/eit-mbvt/%s@stud.uni-due.de", form.Email)
+	localId := fmt.Sprintf("https://openid.uni-due.de/student/eit-mbvt/%s@stud.uni-due.de", form.Email)
+	endpoint := "https://benutzerverwaltung.uni-due.de/auth/openid_a/login/"
 	redirectTo := setting.AppURL + "user/login/openid"
-	url, err := openid.RedirectURL(id, redirectTo, setting.AppURL)
+	url, err := openid.BuildRedirectURL(endpoint, localId, claimedId, redirectTo, setting.AppURL)
 	if err != nil {
 		log.Error("Error in OpenID redirect URL: %s, %v", redirectTo, err.Error())
 		ctx.RenderWithErr(fmt.Sprintf("Unable to find OpenID provider in %s", redirectTo), tplSignInOpenID, &form)
