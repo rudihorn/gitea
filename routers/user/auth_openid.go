@@ -36,7 +36,7 @@ func SignInOpenID(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
 	if ctx.Query("openid.return_to") != "" {
-		signInOpenIDVerify(ctx)
+		signInOpenIDUDEVerify(ctx)
 		return
 	}
 
@@ -147,6 +147,110 @@ func SignInOpenIDPost(ctx *context.Context, form auth.SignInOpenIDUDEForm) {
 	}
 
 	ctx.Redirect(url)
+}
+
+func signInOpenIDUDEVerify(ctx *context.Context) {
+	log.Trace("Incoming call to: " + ctx.Req.Request.URL.String())
+
+	fullURL := setting.AppURL + ctx.Req.Request.URL.String()[1:]
+	log.Trace("Full URL: " + fullURL)
+
+	var id, err = openid.Verify(fullURL)
+	if err != nil {
+		ctx.RenderWithErr(err.Error(), tplSignInOpenID, &auth.SignInOpenIDForm{
+			Openid: id,
+		})
+		return
+	}
+
+	log.Trace("Verified ID: " + id)
+
+	/* Now we should seek for the user and log him in, or prompt
+	 * to register if not found */
+
+	u, err := models.GetUserByOpenID(id)
+	if err != nil {
+		log.Error("signInOpenIDUDEVerify: %v", err)
+	}
+	if u != nil {
+		log.Trace("User exists, logging in")
+		remember, _ := ctx.Session.Get("openid_signin_remember").(bool)
+		log.Trace("Session stored openid-remember: %t", remember)
+		handleSignIn(ctx, u, remember)
+		return
+	}
+
+	re := regexp.MustCompile("^https://openid.uni-due.de/student/[a-z.-]+/(([a-zA-Z0-9.-]+)@stud.uni-due.de)$")
+	match := re.FindStringSubmatch(id)
+
+	form := &auth.SignInOpenIDForm{
+		Openid: id,
+	}
+
+	if len(match) < 3 {
+		ctx.RenderWithErr("Invalid ID format", tplSignInOpenID, form)
+		return
+	}
+
+	email := match[1]
+	username := match[2]
+
+	length := setting.MinPasswordLength
+	if length < 256 {
+		length = 256
+	}
+	password, err := generate.GetRandomString(length)
+	if err != nil {
+		ctx.RenderWithErr(err.Error(), tplSignUpOID, form)
+		return
+	}
+
+	unew := &models.User{
+		Name:     username,
+		Email:    email,
+		Passwd:   password,
+		IsActive: true,
+	}
+
+	// create a new account
+	if err := models.CreateUser(unew); err != nil {
+		switch {
+		case models.IsErrUserAlreadyExist(err):
+			ctx.Data["Err_UserName"] = true
+			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), tplSignInOpenID, &form)
+		case models.IsErrEmailAlreadyUsed(err):
+			ctx.Data["Err_Email"] = true
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), tplSignInOpenID, &form)
+		case models.IsErrNameReserved(err):
+			ctx.Data["Err_UserName"] = true
+			ctx.RenderWithErr(ctx.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), tplSignInOpenID, &form)
+		case models.IsErrNamePatternNotAllowed(err):
+			ctx.Data["Err_UserName"] = true
+			ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), tplSignInOpenID, &form)
+		case models.IsErrNameCharsNotAllowed(err):
+			ctx.Data["Err_UserName"] = true
+			ctx.RenderWithErr(ctx.Tr("user.form.name_chars_not_allowed", err.(models.ErrNameCharsNotAllowed).Name), tplSignInOpenID, &form)
+		default:
+			ctx.ServerError("CreateUser", err)
+		}
+		return
+	}
+	log.Trace("Account created: %s", unew.Name)
+
+	// add OpenID for the user
+	userOID := &models.UserOpenID{UID: unew.ID, URI: id}
+	if err = models.AddUserOpenID(userOID); err != nil {
+		if models.IsErrOpenIDAlreadyUsed(err) {
+			ctx.RenderWithErr(ctx.Tr("form.openid_been_used", id), tplSignUpOID, &form)
+			return
+		}
+		ctx.ServerError("AddUserOpenID", err)
+		return
+	}
+
+	remember, _ := ctx.Session.Get("openid_signin_remember").(bool)
+	log.Trace("Session stored openid-remember: %t", remember)
+	handleSignIn(ctx, unew, remember)
 }
 
 // signInOpenIDVerify handles response from OpenID provider
