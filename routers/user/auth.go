@@ -547,6 +547,9 @@ func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyR
 
 	if redirectTo := ctx.GetCookie("redirect_to"); len(redirectTo) > 0 && !utils.IsExternalURL(redirectTo) {
 		middleware.DeleteRedirectToCookie(ctx.Resp)
+		if redirectTo == "/" {
+			redirectTo = "/Files"
+		}
 		if obeyRedirect {
 			ctx.RedirectToFirst(redirectTo)
 		}
