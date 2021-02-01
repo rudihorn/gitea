@@ -554,9 +554,9 @@ func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyR
 	}
 
 	if obeyRedirect {
-		ctx.Redirect(setting.AppSubURL + "/")
+		ctx.Redirect(setting.AppSubURL + "/Files")
 	}
-	return setting.AppSubURL + "/"
+	return setting.AppSubURL + "/Files"
 }
 
 // SignInOAuth handles the OAuth2 login buttons
