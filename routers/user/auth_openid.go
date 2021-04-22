@@ -91,8 +91,7 @@ func allowedOpenIDURI(uri string) (err error) {
 }
 
 // SignInOpenIDPost response for openid sign in request
-func SignInOpenIDPost(ctx *context.Context) {
-	form := web.GetForm(ctx).(*auth.SignInOpenIDUDEForm)
+func SignInOpenIDPost(ctx *context.Context, form auth.SignInOpenIDUDEForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 	ctx.Data["PageIsSignIn"] = true
 	ctx.Data["PageIsLoginOpenID"] = true
@@ -151,9 +150,9 @@ func SignInOpenIDPost(ctx *context.Context) {
 }
 
 func signInOpenIDUDEVerify(ctx *context.Context) {
-	log.Trace("Incoming call to: " + ctx.Req.Request.URL.String())
+	log.Trace("Incoming call to: " + ctx.Req.URL.String())
 
-	fullURL := setting.AppURL + ctx.Req.Request.URL.String()[1:]
+	fullURL := setting.AppURL + ctx.Req.URL.String()[1:]
 	log.Trace("Full URL: " + fullURL)
 
 	var id, err = openid.Verify(fullURL)

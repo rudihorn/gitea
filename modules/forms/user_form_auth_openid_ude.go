@@ -2,11 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package auth
+package forms
 
 import (
-	"gitea.com/macaron/binding"
-	"gitea.com/macaron/macaron"
+	"net/http"
+
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/web/middleware"
+	"gitea.com/go-chi/binding"
 )
 
 // SignInOpenIDUDEForm form for signing in with OpenID
@@ -16,8 +19,9 @@ type SignInOpenIDUDEForm struct {
 }
 
 // Validate validates the fields
-func (f *SignInOpenIDUDEForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
+func (f *SignInOpenIDUDEForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // SignUpOpenIDForm form for signin up with OpenID
@@ -25,11 +29,13 @@ type SignUpOpenIDUDEForm struct {
 	UserName           string `binding:"Required;AlphaDashDot;MaxSize(40)"`
 	Email              string `binding:"Required;Email;MaxSize(254)"`
 	GRecaptchaResponse string `form:"g-recaptcha-response"`
+	HcaptchaResponse   string `form:"h-captcha-response"`
 }
 
 // Validate validates the fields
-func (f *SignUpOpenIDUDEForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
+func (f *SignUpOpenIDUDEForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // ConnectOpenIDForm form for connecting an existing account to an OpenID URI
@@ -39,6 +45,7 @@ type ConnectOpenIDUDEForm struct {
 }
 
 // Validate validates the fields
-func (f *ConnectOpenIDUDEForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
+func (f *ConnectOpenIDUDEForm) Validate(req *http.Request, errs binding.Errors) binding.Errors {
+	ctx := context.GetContext(req)
+	return middleware.Validate(errs, ctx.Data, f, ctx.Locale)
 }
