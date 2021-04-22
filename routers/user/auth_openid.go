@@ -150,14 +150,14 @@ func SignInOpenIDPost(ctx *context.Context) {
 }
 
 func signInOpenIDUDEVerify(ctx *context.Context) {
-	log.Trace("Incoming call to: " + ctx.Req.Request.URL.String())
+	log.Trace("Incoming call to: " + ctx.Req.URL.String())
 
-	fullURL := setting.AppURL + ctx.Req.Request.URL.String()[1:]
+	fullURL := setting.AppURL + ctx.Req.URL.String()[1:]
 	log.Trace("Full URL: " + fullURL)
 
 	var id, err = openid.Verify(fullURL)
 	if err != nil {
-		ctx.RenderWithErr(err.Error(), tplSignInOpenID, &auth.SignInOpenIDForm{
+		ctx.RenderWithErr(err.Error(), tplSignInOpenID, &forms.SignInOpenIDForm{
 			Openid: id,
 		})
 		return
@@ -183,7 +183,7 @@ func signInOpenIDUDEVerify(ctx *context.Context) {
 	re := regexp.MustCompile("^https://openid.uni-due.de/student/[a-z.-]+/(([a-zA-Z0-9.-]+)@stud.uni-due.de)$")
 	match := re.FindStringSubmatch(id)
 
-	form := &auth.SignInOpenIDForm{
+	form := &forms.SignInOpenIDForm{
 		Openid: id,
 	}
 
